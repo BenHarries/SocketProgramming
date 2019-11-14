@@ -13,6 +13,8 @@ port = int(sys.argv[2])
 server_address = (serverip, port)
 sock.bind(server_address)
 print('starting up on {} port {}'.format(*sock.getsockname()))
+
+
 sock.listen(1)
 
 while True:
@@ -20,22 +22,22 @@ while True:
     connection, client_address = sock.accept()
     try:
         print('client connected:', client_address)
-        while True:
-            data = connection.recv(16)
-            print('received {!r}'.format(data))
-            if data == b'GET_BOARDS':
-                print("ya")
-                directories = ([(name) for name in os.listdir("./board") if os.path.isdir(os.path.join("./board", name))])
-                counter = 0
-                return_data = ""
-                for i in directories:
-                    counter += 1
-                    return_data += (str(counter) + ". " + i + "; ")
+        data = connection.recv(16)
+        print('received {!r}'.format(data))
+        if data == b'GET_BOARDS':
+            print("ya")
+            directories = ([(name) for name in os.listdir(
+                "./board") if os.path.isdir(os.path.join("./board", name))])
+            counter = 0
+            return_data = ""
+            for i in directories:
+                counter += 1
+                return_data += (str(counter) + ". " + i + "; ")
 
-                print(return_data)
-            if data:
-                connection.sendall(data)
-            else:
-                break
+            return_data = str.encode(return_data)
+            connection.sendall(return_data)
+        if data == b'Salmon':
+            print("yee")
+
     finally:
         connection.close()

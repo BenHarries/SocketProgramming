@@ -19,13 +19,11 @@ try:
     message = b'GET_BOARDS'
     print('sending {!r}'.format(message))
     sock.sendall(message)
-
-    amount_received = 0
-    amount_expected = len(message)
-    while amount_received < amount_expected:
-        data = sock.recv(16)
-        amount_received += len(data)
-        print('received {!r}'.format(data))
+    data = sock.recv(70)
+    print('received {!r}'.format(data))
+    text = input("Enter your Board of Choice: ")
+    print(type(text))
+    sock.sendall(text.encode())
 
 finally:
     sock.close()
