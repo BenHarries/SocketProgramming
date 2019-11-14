@@ -21,9 +21,11 @@ try:
     sock.sendall(message)
     data = sock.recv(70)
     print('received {!r}'.format(data))
+
     text = input("Enter your Board of Choice: ")
     print(type(text))
     sock.sendall(text.encode())
 
 finally:
+    print("oops")
     sock.close()
