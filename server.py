@@ -6,12 +6,17 @@ import pickle
 import datetime
 
 
+from _thread import *
+import threading
+
+
 HEADER_LENGTH = 10
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # Bind the socket to the address given on the command line
+
 
 serverip = (sys.argv[1])
 port = int(sys.argv[2])
@@ -26,29 +31,43 @@ except error as e:
     serverSocket.close()
 print('starting up on {} port {}'.format(*sock.getsockname()))
 
-sock.listen(1)
 
 directories = ([(name) for name in os.listdir(
     "./board") if os.path.isdir(os.path.join("./board", name))])
 
-while True:
-    print('waiting for a connection')
-    connection, client_address = sock.accept()
-    try:
-        print('client connected:', client_address)
-        while True:
-            data = connection.recv(1040)
-            data = pickle.loads(data)
-            if not data:
-                break
-            print('received {!r}'.format(data))
-            if data == 'GET_BOARDS':
-                print("ya")
+sock.listen(5)
 
+
+def serverLog(clientIPPort, msgType, status):
+    currentDT = datetime.datetime.now().strftime("%c")
+    completeFileName = os.path.join(os.getcwd(), 'serverLog.txt')
+    try:
+        serverLogFile = open(completeFileName, "a+")
+        serverLogFile.write(clientIPPort + '\t' + currentDT +
+                            '\t' + msgType + '\t' + status + '\n')
+        serverLogFile.close()
+    except error as e:
+        print('ERROR: serverLog error has occurred - ', e)
+
+
+def threaded(connection):
+    print("New Thread")
+    while True:
+
+        data = connection.recv(1040)
+        data = pickle.loads(data)
+        if not data:
+            break
+        print('received {!r}'.format(data))
+        if data == 'GET_BOARDS':
+            print("ya")
+            try:
                 if len(directories) == 0:
                     print("ERROR: No message boards defined")
-                    connectionSocket.send(pickle.dumps(100))
-                    serverSocket.close()
+                    connection.send(pickle.dumps(100))
+                    connection.close()
+                    serverLog(formattedAddr, "GET_BOARDS", "Error")
+
                     break
                 # counter = 0
                 # return_data = ""
@@ -61,49 +80,88 @@ while True:
                 # connection.sendall(return_data)
 
                 connection.sendall(pickle.dumps(directories))
+                serverLog(formattedAddr, "GET_BOARDS", "Success")
+            except:
+                serverLog(formattedAddr, "GET_BOARDS", "Error")
+        elif data == 'QUIT':
+            print("QUITING")
+        else:  # Need to have a condition here
+            command = data[0]
+            if (command == "GET_BOARD_MESSAGES"):
+                number_of_board = int(data[1])
+                if number_of_board > len(directories):
+                    connection.sendall(pickle.dumps(101))
+                else:
+                    desired_board = "./board/" + \
+                        directories[number_of_board-1]
+                    desired_board_file_names = [
+                        name for name in os.listdir(desired_board)]
+                    desired_board_file_paths = [
+                        open(desired_board + "/" + name, "r") for name in os.listdir(desired_board)]
+                    files_by_date = {}
+                    dt = []
+                    dates = []
+                    for file in desired_board_file_names:
 
-            else:  # Need to have a condition here
-                command = data[0]
-                if (command == "GET_BOARD_MESSAGES"):
-                    number_of_board = int(data[1])
-                    if number_of_board > len(directories):
-                        connection.sendall(pickle.dumps(101))
-                    else:
-                        desired_board = "./board/" + \
-                            directories[number_of_board-1]
-                        desired_board_file_names = [
-                            name for name in os.listdir(desired_board)]
-                        desired_board_file_paths = [
-                            open(desired_board + "/" + name, "r") for name in os.listdir(desired_board)]
-                        messages = []
-                        files_by_date = {}
-                        dt = []
-                        for file in desired_board_file_names:
-                            print("file", file)
-                            date = file[0:8]
-                            time = file[9:15]
+                        print("file", file)
+                        date = file[0:8]
+                        time = file[9:15]
+                        try:
                             files_by_date[desired_board + "/" + file] = datetime.datetime.strptime(
                                 date+time, '%Y%m%d%H%M%S')
-                        dt = list(
-                            reversed(sorted(files_by_date, key=files_by_date.get)))
-                        print("files sorted by date")
-                        print(dt)
-                        print("\n")
-
-                        for file in dt:
-                            print(file)
-                            messages.append(open(file, "r").read())
-                        connection.sendall(pickle.dumps(messages[:100]))
-                elif command == "POST_MESSAGE":
+                        except:
+                            print("file not correct format")
+                            serverLog(formattedAddr,
+                                      "GET_MESSAGES", "Error")
+                            connection.sendall(pickle.dumps(101))
+                            continue
+                        dates.append(datetime.datetime.strptime(
+                            date+time, '%Y%m%d%H%M%S'))
+                    dt = list(
+                        (sorted(files_by_date, key=files_by_date.get)))
+                    print("files sorted by date")
+                    dates = list((sorted(dates)))
+                    print(dt)
+                    print("\n")
+                    messages = []
+                    for c, file in enumerate(dt):
+                        print(dates[c])
+                        messages.append(open(file, "r").read())
+                    connection.sendall(pickle.dumps(messages[:100]))
+                    serverLog(formattedAddr, "GET_MESSAGES", "Success")
+            elif command == "POST_MESSAGE":
+                # ERROR HANDLING IF NOt A NUMBER INPUTTED
+                try:
                     desired_board_num = int(data[1])
-                    message_title = data[2]
+                    if desired_board_num > len(directories):
+                        connection.sendall(pickle.dumps(101))
+                    message_title = data[2].replace(" ", "_")
                     message_content = data[3]
                     desired_board_path = "./board/" + \
                         directories[desired_board_num-1]
                     print(desired_board_path + message_title+".txt")
-                    f = open(desired_board_path + "/" +
-                             message_title+".txt", "w+")
+                    print(datetime.datetime.now().strftime(
+                        "%Y%m%d-%H%M%S-"))
+                    f = open(desired_board_path + "/" + datetime.datetime.now().strftime(
+                        "%Y%m%d-%H%M%S-") +
+                        message_title, "w+")
+                    print(message_content, "WRITING")
                     f.write(message_content)
+                    f.close()
+                    print("Succesful POST")
+                    serverLog(formattedAddr, "POST_MESSAGE", "Success")
+                    connection.sendall(pickle.dumps("All Good"))
+                except:
+                    serverLog(formattedAddr, "GET_MESSAGE", "Error")
+                    print("Unsuccesful POST")
+    connection.close()
 
-    finally:
-        connection.close()
+
+while True:
+    print('waiting for a connection')
+    connection, client_address = sock.accept()
+    formattedAddr = str(client_address)[1:len(
+        str(client_address)) - 1].replace(', ', ':').replace("'", '')
+    print('client connected:', client_address)
+    start_new_thread(threaded, (connection,))
+connection.close()
