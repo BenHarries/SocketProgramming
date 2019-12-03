@@ -13,16 +13,22 @@ port = int(sys.argv[2])
 
 server_address = (serverip, port)
 print('connecting to {} port {}'.format(*server_address))
-sock.connect(server_address)
+try:
+    sock.connect(server_address)
+except:
+    print("ERROR: Port is unavailable")
+    print("Specific error: ")
+
+    sock.close()
 
 
 def errorHandle(boardList):
     code = pickle.loads(boardList)
     if (code) == 100:
-        print("No Boards")
+        print("ERROR: No Boards!")
         return False
     elif (code) == 101:
-        print("Not a number of a Board!")
+        print("ERROR: Not a number of a Board!")
         return False
     else:
         return True
@@ -57,9 +63,10 @@ try:
             text = str(input('Input: \n - A board number \n - POST to post a message \n - QUIT \n')
                        )
             if text == "QUIT":
-                print("Bye!")
                 sock.sendall(pickle.dumps("QUIT"))
                 sock.close()
+                print("Succesful QUIT")
+                break
             elif text == "POST":
                 number_of_board = str(input("Enter your Board to post to: "))
                 while not RepresentsInt(number_of_board):
@@ -74,11 +81,17 @@ try:
                 data = sock.recv(1040)
                 if not errorHandle(data):
                     continue
+                else:
+                    print("Succesful POST")
+
             elif RepresentsInt(text):
                 sock.sendall(pickle.dumps(["GET_BOARD_MESSAGES", text]))
                 data = sock.recv(1040)
                 if not errorHandle(data):
-                    continue
+                    break
+                else:
+                    print("Succesful GET_MESSAGES")
+
                 messages = pickle.loads(data)
                 print("\n")
                 for message in messages:

@@ -24,12 +24,11 @@ port = int(sys.argv[2])
 server_address = (serverip, port)
 try:
     sock.bind(server_address)
+    print('starting up on {} port {}'.format(*sock.getsockname()))
 except error as e:
     print("ERROR: Port is unavailable")
     print("Specific error: " + str(e))
-    portConnected = False
-    serverSocket.close()
-print('starting up on {} port {}'.format(*sock.getsockname()))
+    sock.close()
 
 
 directories = ([(name) for name in os.listdir(
@@ -38,13 +37,13 @@ directories = ([(name) for name in os.listdir(
 sock.listen(5)
 
 
-def serverLog(clientIPPort, msgType, status):
-    currentDT = datetime.datetime.now().strftime("%c")
-    completeFileName = os.path.join(os.getcwd(), 'serverLog.txt')
+def serverLog(clientIP_PORT, client_command, status):
+    currentDateTime = datetime.datetime.now().strftime("%c")
+    allFileName = os.path.join(os.getcwd(), 'serverLog.txt')
     try:
-        serverLogFile = open(completeFileName, "a+")
-        serverLogFile.write(clientIPPort + '\t' + currentDT +
-                            '\t' + msgType + '\t' + status + '\n')
+        serverLogFile = open(allFileName, "a+")
+        serverLogFile.write(clientIP_PORT + '\t' + currentDateTime +
+                            '\t' + client_command + '\t' + status + '\n')
         serverLogFile.close()
     except error as e:
         print('ERROR: serverLog error has occurred - ', e)
@@ -60,31 +59,24 @@ def threaded(connection):
             break
         print('received {!r}'.format(data))
         if data == 'GET_BOARDS':
-            print("ya")
-            try:
-                if len(directories) == 0:
-                    print("ERROR: No message boards defined")
-                    connection.send(pickle.dumps(100))
-                    connection.close()
-                    serverLog(formattedAddr, "GET_BOARDS", "Error")
-
-                    break
-                # counter = 0
-                # return_data = ""
-                # for i in directories:
-                #     counter += 1
-                    # return_data += (str(counter) + ". " + i + "; ")
-
-                # return_data = str.encode(return_data)
-
-                # connection.sendall(return_data)
-
-                connection.sendall(pickle.dumps(directories))
-                serverLog(formattedAddr, "GET_BOARDS", "Success")
-            except:
+            if len(directories) == 0:
+                print("ERROR: No message boards defined")
+                connection.send(pickle.dumps(100))
+                connection.close()
                 serverLog(formattedAddr, "GET_BOARDS", "Error")
+                os._exit(0)
+                return False
+            else:
+                try:
+                    connection.sendall(pickle.dumps(directories))
+                    serverLog(formattedAddr, "GET_BOARDS", "OK")
+                except:
+                    serverLog(formattedAddr, "GET_BOARDS", "Error")
         elif data == 'QUIT':
+            connection.close()
+            sys.exit()
             print("QUITING")
+            break
         else:  # Need to have a condition here
             command = data[0]
             if (command == "GET_BOARD_MESSAGES"):
@@ -128,7 +120,7 @@ def threaded(connection):
                         print(dates[c])
                         messages.append(open(file, "r").read())
                     connection.sendall(pickle.dumps(messages[:100]))
-                    serverLog(formattedAddr, "GET_MESSAGES", "Success")
+                    serverLog(formattedAddr, "GET_MESSAGES", "OK")
             elif command == "POST_MESSAGE":
                 # ERROR HANDLING IF NOt A NUMBER INPUTTED
                 try:
@@ -149,11 +141,12 @@ def threaded(connection):
                     f.write(message_content)
                     f.close()
                     print("Succesful POST")
-                    serverLog(formattedAddr, "POST_MESSAGE", "Success")
+                    serverLog(formattedAddr, "POST_MESSAGE", "OK")
                     connection.sendall(pickle.dumps("All Good"))
                 except:
                     serverLog(formattedAddr, "GET_MESSAGE", "Error")
                     print("Unsuccesful POST")
+    return True
     connection.close()
 
 
