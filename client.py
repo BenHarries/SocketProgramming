@@ -4,6 +4,7 @@ import pickle
 
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.settimeout(10)
 
 # Connect the socket to the port on the server
 # given by the caller
@@ -15,11 +16,18 @@ server_address = (serverip, port)
 print('connecting to {} port {}'.format(*server_address))
 try:
     sock.connect(server_address)
+
 except:
     print("ERROR: Port is unavailable")
     print("Specific error: ")
 
     sock.close()
+
+
+def timeoutError():
+    print("ERROR: The server timed out")
+    sock.close()
+    sys.exit()
 
 
 def errorHandle(boardList):
@@ -48,8 +56,11 @@ def RepresentsInt(s):
 try:
     message = pickle.dumps('GET_BOARDS')
     # print("SEND", message.decode())
-    sock.sendall(message)
-    data = sock.recv(1040)
+    try:
+        sock.sendall(message)
+        data = sock.recv(1040)
+    except:
+        timeoutError()
 
     if not errorHandle(data):
         sock.close()
@@ -80,16 +91,24 @@ try:
                 message_content = input("Enter your message content: ")
                 post_message = ["POST_MESSAGE", number_of_board,
                                 message_title, message_content]
-                sock.sendall(pickle.dumps(post_message))
-                data = sock.recv(1040)
+
+                try:
+                    sock.sendall(pickle.dumps(post_message))
+                    data = sock.recv(1040)
+                except:
+                    timeoutError()
                 if not errorHandle(data):
                     continue
                 else:
                     print("Succesful POST")
 
             elif RepresentsInt(text):
-                sock.sendall(pickle.dumps(["GET_BOARD_MESSAGES", text]))
-                data = sock.recv(1040)
+                try:
+                    sock.sendall(pickle.dumps(["GET_BOARD_MESSAGES", text]))
+                    data = sock.recv(1040)
+                except:
+                    timeoutError()
+
                 if not errorHandle(data):
                     continue
                 else:

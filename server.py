@@ -25,10 +25,10 @@ server_address = (serverip, port)
 try:
     sock.bind(server_address)
     print('starting up on {} port {}'.format(*sock.getsockname()))
-except error as e:
+except:
     print("ERROR: Port is unavailable")
-    print("Specific error: " + str(e))
     sock.close()
+    os._exit(1)
 
 
 directories = ([(name) for name in os.listdir(
