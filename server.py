@@ -71,6 +71,7 @@ def threaded(connection):
                     connection.sendall(pickle.dumps(directories))
                     serverLog(formattedAddr, "GET_BOARDS", "OK")
                 except:
+                    connection.sendall(pickle.dumps(102))
                     serverLog(formattedAddr, "GET_BOARDS", "Error")
         elif data == 'QUIT':
             connection.close()
@@ -93,11 +94,15 @@ def threaded(connection):
                     files_by_date = {}
                     dt = []
                     dates = []
+                    message_titles = []
                     for file in desired_board_file_names:
 
                         print("file", file)
                         date = file[0:8]
                         time = file[9:15]
+                        print("FILEE", file[16:])
+                        message_title = file[16:].replace("_", " ")
+                        message_titles.append(message_title)
                         try:
                             files_by_date[desired_board + "/" + file] = datetime.datetime.strptime(
                                 date+time, '%Y%m%d%H%M%S')
@@ -127,24 +132,29 @@ def threaded(connection):
                     desired_board_num = int(data[1])
                     if desired_board_num > len(directories):
                         connection.sendall(pickle.dumps(101))
-                    message_title = data[2].replace(" ", "_")
-                    message_content = data[3]
-                    desired_board_path = "./board/" + \
-                        directories[desired_board_num-1]
-                    print(desired_board_path + message_title+".txt")
-                    print(datetime.datetime.now().strftime(
-                        "%Y%m%d-%H%M%S-"))
-                    f = open(desired_board_path + "/" + datetime.datetime.now().strftime(
-                        "%Y%m%d-%H%M%S-") +
-                        message_title, "w+")
-                    print(message_content, "WRITING")
-                    f.write(message_content)
-                    f.close()
-                    print("Succesful POST")
-                    serverLog(formattedAddr, "POST_MESSAGE", "OK")
-                    connection.sendall(pickle.dumps("All Good"))
+                        print("Unsuccesful POST")
+                        serverLog(formattedAddr, "POST_MESSAGE", "Error")
+
+                    else:
+                        message_title = data[2].replace(" ", "_")
+                        message_content = data[3]
+                        desired_board_path = "./board/" + \
+                            directories[desired_board_num-1]
+                        print(desired_board_path + message_title+".txt")
+                        print(datetime.datetime.now().strftime(
+                            "%Y%m%d-%H%M%S-"))
+                        f = open(desired_board_path + "/" + datetime.datetime.now().strftime(
+                            "%Y%m%d-%H%M%S-") +
+                            message_title, "w+")
+                        print(message_content, "WRITING")
+                        f.write(message_content)
+                        f.close()
+                        print("Succesful POST")
+                        serverLog(formattedAddr, "POST_MESSAGE", "OK")
+                        connection.sendall(pickle.dumps("All Good"))
                 except:
-                    serverLog(formattedAddr, "GET_MESSAGE", "Error")
+                    serverLog(formattedAddr, "POST_MESSAGE", "Error")
+                    connection.sendall(pickle.dumps(102))
                     print("Unsuccesful POST")
     return True
     connection.close()

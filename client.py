@@ -30,6 +30,9 @@ def errorHandle(boardList):
     elif (code) == 101:
         print("ERROR: Not a number of a Board!")
         return False
+    elif code == 102:
+        print("ERROR in request")
+        return False
     else:
         return True
 
@@ -88,7 +91,7 @@ try:
                 sock.sendall(pickle.dumps(["GET_BOARD_MESSAGES", text]))
                 data = sock.recv(1040)
                 if not errorHandle(data):
-                    break
+                    continue
                 else:
                     print("Succesful GET_MESSAGES")
 
