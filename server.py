@@ -94,17 +94,14 @@ def threaded(connection):
                     files_by_date = {}
                     dt = []
                     dates = []
-                    message_titles = []
                     for file in desired_board_file_names:
 
                         print("file", file)
                         date = file[0:8]
                         time = file[9:15]
                         print("FILEE", file[16:])
-                        message_title = file[16:].replace("_", " ")
-                        message_titles.append(message_title)
                         try:
-                            files_by_date[desired_board + "/" + file] = datetime.datetime.strptime(
+                            files_by_date[file] = datetime.datetime.strptime(
                                 date+time, '%Y%m%d%H%M%S')
                         except:
                             print("file not correct format")
@@ -114,17 +111,20 @@ def threaded(connection):
                             continue
                         dates.append(datetime.datetime.strptime(
                             date+time, '%Y%m%d%H%M%S'))
-                    dt = list(
-                        (sorted(files_by_date, key=files_by_date.get)))
+                    dt = list(reversed
+                              (sorted(files_by_date, key=files_by_date.get)))
                     print("files sorted by date")
-                    dates = list((sorted(dates)))
                     print(dt)
                     print("\n")
                     messages = []
+                    message_titles = []
+
                     for c, file in enumerate(dt):
-                        print(dates[c])
-                        messages.append(open(file, "r").read())
-                    connection.sendall(pickle.dumps(messages[:100]))
+                        messages.append(
+                            open(desired_board + "/" + file, "r").read())
+                        message_titles.append(file[16:].replace("_", " "))
+                    connection.sendall(pickle.dumps(
+                        [message_titles[:100], messages[:100]]))
                     serverLog(formattedAddr, "GET_MESSAGES", "OK")
             elif command == "POST_MESSAGE":
                 # ERROR HANDLING IF NOt A NUMBER INPUTTED

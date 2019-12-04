@@ -96,9 +96,12 @@ try:
                     print("Succesful GET_MESSAGES")
 
                 messages = pickle.loads(data)
-                print("\n")
-                for message in messages:
-                    print(message + "\n")
+                print("100 Most Recent Messages...\n")
+                print("e.g Message Title:Message \n")
+                length = len(messages[0])
+                for c in range(length):
+                    print(messages[0][length - 1 - c] + ":" +
+                          messages[1][length - 1 - c] + "\n")
             else:
                 print("Not a command")
 
